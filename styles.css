@@ -15,6 +15,7 @@
 
 *{box-sizing:border-box}
 html,body{height:100%}
+
 body{
   margin:0;
   font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial;
@@ -23,28 +24,37 @@ body{
     radial-gradient(1200px 900px at 20% 20%, var(--bg2), transparent 55%),
     radial-gradient(1000px 800px at 90% 30%, #ffe7f1, transparent 60%),
     linear-gradient(180deg, var(--bg1), #ffffff 55%, var(--bg1));
+  overflow-x:hidden; /* prevents side jitter */
 }
 
+/* ===== Mobile viewport stability (prevents “moving a lot”) ===== */
 .stage{
-  min-height:100%;
+  /* dvh is stable on mobile browsers; fallback is fine */
+  min-height: 100vh;
+  min-height: 100dvh;
   display:flex;
   align-items:center;
   justify-content:center;
-  padding:22px;
+  padding: 16px;
 }
 
 .book{
   width:min(1120px, 96vw);
-  height:min(740px, 88vh);
+  height: min(740px, calc(100dvh - 32px)); /* stable fit-to-screen */
   display:grid;
   grid-template-columns: 0.95fr 1.25fr;
-  gap:22px;
+  gap:18px;
   align-items:stretch;
 }
 
+/* Phone/tablet: single column and keep it locked to screen height */
 @media (max-width: 980px){
-  .book{ grid-template-columns: 1fr; height:auto; }
-  .pages{ min-height: 680px; }
+  .book{
+    grid-template-columns: 1fr;
+    height: calc(100dvh - 32px);
+  }
+  .cover{ display:none; } /* OPTIONAL: removes cover on phone for bigger pages */
+  .pages{ height: 100%; }
 }
 
 .cover{
@@ -120,7 +130,12 @@ body{
 
 .tiny{ font-size: 12px; color: rgba(43,27,36,.78); }
 
-.pages{ display:flex; align-items:center; justify-content:center; }
+.pages{
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  min-height: 0; /* important for flex children inside fixed height */
+}
 
 .sheet{
   width:100%;
@@ -140,7 +155,7 @@ body{
 }
 
 .pageHeader{
-  padding: 14px 16px;
+  padding: 12px 14px;
   display:flex;
   align-items:center;
   justify-content:space-between;
@@ -173,18 +188,25 @@ body{
 }
 
 .pageBody{
-  height: calc(100% - 70px);
-  padding: 10px 16px 16px;
-  overflow:auto;
+  /* locked body height to prevent shifting */
+  height: calc(100% - 66px);
+  padding: 10px 12px 12px;
+  overflow: hidden; /* IMPORTANT: stop bouncing scroll inside */
 }
 
-.readerBody{ display:flex; flex-direction:column; gap:12px; }
+.readerBody{
+  display:flex;
+  flex-direction:column;
+  gap:10px;
+  height:100%;
+  min-height:0;
+}
 
 .topRow{
   display:flex;
   align-items:center;
   justify-content:space-between;
-  gap:12px;
+  gap:10px;
   flex-wrap:wrap;
 }
 
@@ -218,21 +240,31 @@ body{
   font-weight:900;
 }
 
+/* ===== Bigger Qur’an page area ===== */
 .mushafFrame{
   position:relative;
   border-radius: 18px;
   border: 1px solid rgba(43,27,36,.10);
-  background: rgba(255,255,255,.72);
+  background: rgba(255,255,255,.82);
   overflow:hidden;
-  flex: 1;
-  min-height: 360px;
+
+  flex: 1;         /* take maximum vertical space */
+  min-height: 0;   /* allow it to shrink without causing overflow */
 }
 
 .pageImg{
   width:100%;
   height:100%;
-  object-fit:contain;
+  object-fit: contain;
   display:block;
+
+  /* Make it appear larger (less margins inside the image box) */
+  transform: scale(1.08);
+  transform-origin: center;
+}
+
+@media (max-width: 520px){
+  .pageImg{ transform: scale(1.18); } /* extra zoom on phones */
 }
 
 .imgShade{
@@ -243,12 +275,13 @@ body{
   pointer-events:none;
 }
 
+/* ===== Player pinned small so page stays large ===== */
 .playerCard{
-  border-radius: 18px;
+  border-radius: 16px;
   border: 1px solid rgba(217,74,140,.18);
   background: linear-gradient(180deg, rgba(217,74,140,.10), rgba(255,255,255,.60));
-  box-shadow: 0 12px 28px rgba(20,10,15,.08);
-  padding: 12px;
+  box-shadow: 0 10px 24px rgba(20,10,15,.08);
+  padding: 10px;
 }
 
 .playerTop{
@@ -256,7 +289,7 @@ body{
   justify-content:space-between;
   align-items:center;
   gap:10px;
-  margin-bottom: 10px;
+  margin-bottom: 8px;
 }
 
 .playerSub{
@@ -269,7 +302,7 @@ body{
   border: 1px solid rgba(43,27,36,.12);
   background: rgba(255,255,255,.75);
   border-radius: 999px;
-  padding: 8px 12px;
+  padding: 8px 10px;
   cursor:pointer;
   font-weight:900;
   font-size: 12px;
@@ -282,15 +315,16 @@ body{
 }
 
 .iconBtn{
-  width: 56px; height: 46px;
+  width: 58px; height: 46px;
   border-radius: 14px;
   border: 1px solid rgba(43,27,36,.12);
   background: rgba(255,255,255,.78);
   cursor:pointer;
   font-weight:900;
 }
-.iconBtn.big{ width: 84px; height: 52px; border-radius: 16px; }
+.iconBtn.big{ width: 92px; height: 52px; border-radius: 16px; }
 
+/* Flip */
 .face{ transform-style: preserve-3d; backface-visibility: hidden; }
 .front{ transform-origin: left center; transform: rotateY(0deg); transition: transform 520ms cubic-bezier(.2,.8,.2,1); }
 .back{ transform-origin: left center; transform: rotateY(180deg); transition: transform 520ms cubic-bezier(.2,.8,.2,1); }
@@ -308,7 +342,7 @@ body{
   background: rgba(255,255,255,.55);
 }
 
-/* Drawer */
+/* Drawer + backdrop unchanged (still stable) */
 .drawer{
   position:fixed;
   top:16px;
@@ -326,7 +360,6 @@ body{
   flex-direction:column;
   overflow:hidden;
 }
-
 .drawer.open{ transform: translateX(0); }
 
 .drawerTop{
@@ -337,7 +370,6 @@ body{
   border-bottom: 1px solid rgba(43,27,36,.08);
   background: linear-gradient(180deg, rgba(217,74,140,.10), rgba(255,255,255,.70));
 }
-
 .drawerTitle{ font-weight:950; color:#5b1634; }
 
 .drawerGrid{
@@ -356,14 +388,12 @@ body{
   cursor:pointer;
   position:relative;
 }
-
 .thumb img{
   width:100%;
   height: 140px;
   object-fit: cover;
   display:block;
 }
-
 .thumb .num{
   position:absolute;
   left:8px;
