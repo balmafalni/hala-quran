@@ -10,9 +10,9 @@
 
   <body>
     <main class="stage">
-      <section class="book" aria-label="Quran book">
-        <!-- Fixed Cover (does NOT change when you flip pages) -->
-        <aside class="cover" aria-label="Cover">
+      <section class="book">
+        <!-- Fixed cover -->
+        <aside class="cover">
           <div class="coverInner">
             <div class="emboss">
               <div class="bismillah">بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</div>
@@ -22,142 +22,81 @@
 
             <div class="coverFooter">
               <button class="pill" id="openBookBtn" type="button">افتحي القرآن</button>
-              <div class="tiny">صفحات وردية • تلاوة: ياسر الدوسري</div>
+              <div class="tiny">صفحات • تلاوة: ياسر الدوسري</div>
             </div>
           </div>
         </aside>
 
-        <!-- Right page stack -->
-        <section class="pages" aria-label="Pages">
+        <!-- Reader pages -->
+        <section class="pages">
           <div class="sheet" id="sheet">
-            <!-- Front page -->
             <article class="page face front" id="frontPage">
               <header class="pageHeader">
+                <button class="miniBtn" id="thumbsBtn" type="button">☰</button>
                 <div class="badge">الصفحة</div>
                 <div class="pageNum" id="pageNumFront">1</div>
+                <button class="miniBtn" id="bookmarkBtn" type="button" title="حفظ الموضع">🔖</button>
               </header>
 
-              <div class="pageBody">
-                <!-- Home -->
-                <section class="panel active" data-panel="home">
-                  <h1 class="h1">مرحبًا يا <span class="pink">حلا</span> 🌸</h1>
-                  <p class="p">
-                    هذا قرآن إلكتروني بتصميم “كتاب حقيقي” — اقلبِ الصفحات يمين/يسار.
-                  </p>
+              <div class="pageBody readerBody">
+                <div class="topRow">
+                  <div class="nowTitle" id="nowTitle">الصفحة 1</div>
 
-                  <div class="grid2">
-                    <button class="cardBtn" data-go="surah">
-                      <div class="cardTitle">ابدئي القراءة</div>
-                      <div class="cardSub">اختاري سورة واستمعي للتلاوة</div>
-                    </button>
-
-                    <button class="cardBtn" data-go="dua">
-                      <div class="cardTitle">صفحة الدعاء</div>
-                      <div class="cardSub">أدعية مختارة (قابلة للتعديل)</div>
-                    </button>
+                  <div class="jump">
+                    <input id="pageInput" class="pageInput" inputmode="numeric" pattern="[0-9]*" placeholder="اذهبي لصفحة" />
+                    <button id="goBtn" class="goBtn" type="button">اذهب</button>
                   </div>
-
-                  <div class="hintRow">
-                    <div class="hint">⬅️ السابق</div>
-                    <div class="hint">التالي ➡️</div>
-                  </div>
-                </section>
-
-                <!-- Surah picker -->
-                <section class="panel" data-panel="surah">
-                  <h2 class="h2">اختاري سورة</h2>
-
-                  <div class="controls">
-                    <label class="lbl">السورة</label>
-                    <select id="surahSelect" class="select"></select>
-
-                    <label class="lbl">الآية</label>
-                    <select id="ayahSelect" class="select"></select>
-                  </div>
-
-                  <div class="playerCard">
-                    <div class="playerTop">
-                      <div>
-                        <div class="playerTitle" id="nowTitle">—</div>
-                        <div class="playerSub">تلاوة: ياسر الدوسري</div>
-                      </div>
-
-                      <div class="playerBtns">
-                        <button class="iconBtn" id="prevAyahBtn" type="button" title="الآية السابقة">⟲</button>
-                        <button class="iconBtn big" id="playBtn" type="button">▶</button>
-                        <button class="iconBtn" id="nextAyahBtn" type="button" title="الآية التالية">⟳</button>
-                      </div>
-                    </div>
-
-                    <audio id="audio" preload="none"></audio>
-
-                    <div class="ayahBox">
-                      <div class="ayahText" id="ayahText">اختاري سورة ثم آية.</div>
-                    </div>
-
-                    <div class="smallNote">
-                      الصوت يتم تحميله مباشرة من EveryAyah (ملفات verse-by-verse). :contentReference[oaicite:1]{index=1}
-                    </div>
-                  </div>
-                </section>
-
-                <!-- Dua page -->
-                <section class="panel" data-panel="dua">
-                  <h2 class="h2">صفحة الدعاء</h2>
-
-                  <div class="duaList">
-                    <div class="duaItem">
-                      <div class="duaTitle">دعاء الهداية</div>
-                      <div class="duaText">اللَّهُمَّ اهْدِنَا وَاهْدِ بِنَا وَاجْعَلْنَا سَبَبًا لِمَنِ اهْتَدَى.</div>
-                    </div>
-
-                    <div class="duaItem">
-                      <div class="duaTitle">دعاء السكينة</div>
-                      <div class="duaText">اللَّهُمَّ أَنْزِلِ السَّكِينَةَ فِي قُلُوبِنَا وَارْزُقْنَا طُمَأْنِينَةً.</div>
-                    </div>
-
-                    <div class="duaItem">
-                      <div class="duaTitle">دعاء الرزق</div>
-                      <div class="duaText">اللَّهُمَّ اكْفِنَا بِحَلَالِكَ عَنْ حَرَامِكَ وَأَغْنِنَا بِفَضْلِكَ عَمَّنْ سِوَاكَ.</div>
-                    </div>
-                  </div>
-
-                  <div class="softBox">
-                    <div class="softTitle">تعديل الأدعية</div>
-                    <div class="softText">افتحي <span class="mono">app.js</span> وعدّلي قائمة الأدعية بسهولة.</div>
-                  </div>
-                </section>
-              </div>
-
-              <footer class="pageFooter">
-                <div class="nav">
-                  <button class="navBtn" id="prevBtn" type="button">⬅️ السابق</button>
-                  <button class="navBtn primary" id="nextBtn" type="button">التالي ➡️</button>
                 </div>
-              </footer>
+
+                <div class="mushafFrame">
+                  <img id="pageImg" class="pageImg" alt="Quran page" />
+                  <div class="imgShade"></div>
+                </div>
+
+                <div class="playerCard">
+                  <div class="playerTop">
+                    <div class="playerSub">تلاوة: ياسر الدوسري</div>
+                    <div class="toggles">
+                      <button class="toggle" id="autoplayBtn" type="button">تشغيل تلقائي: إيقاف</button>
+                    </div>
+                  </div>
+
+                  <div class="playerBtns">
+                    <button class="iconBtn" id="prevBtn" type="button">⬅️</button>
+                    <button class="iconBtn big" id="playBtn" type="button">▶</button>
+                    <button class="iconBtn" id="nextBtn" type="button">➡️</button>
+                  </div>
+
+                  <audio id="audio" preload="none"></audio>
+                </div>
+              </div>
             </article>
 
-            <!-- Back page (shown during flip) -->
             <article class="page face back" id="backPage" aria-hidden="true">
               <header class="pageHeader">
                 <div class="badge">الصفحة</div>
                 <div class="pageNum" id="pageNumBack">2</div>
               </header>
-
               <div class="pageBody backFill">
                 <div class="backMark">﴿ وَرَتِّلِ الْقُرْآنَ تَرْتِيلًا ﴾</div>
               </div>
-
-              <footer class="pageFooter">
-                <div class="nav ghost">
-                  <span class="ghostText">تقليب الصفحة…</span>
-                </div>
-              </footer>
             </article>
           </div>
         </section>
       </section>
     </main>
+
+    <!-- Thumbnails drawer -->
+    <div class="drawer" id="drawer" aria-hidden="true">
+      <div class="drawerTop">
+        <div class="drawerTitle">الصفحات</div>
+        <button class="miniBtn" id="closeDrawerBtn" type="button">✕</button>
+      </div>
+
+      <div class="drawerGrid" id="thumbGrid"></div>
+    </div>
+
+    <div class="backdrop" id="backdrop" aria-hidden="true"></div>
 
     <script src="app.js"></script>
   </body>
