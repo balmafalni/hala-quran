@@ -34,15 +34,16 @@
 
         <button id="resumeBtn" class="btn secondary" type="button">اكمل من آخر موضع</button>
         <button id="duaBtn" class="btn secondary" type="button">صفحة الدعاء</button>
-        <button id="openCoverBtn" class="btn" type="button">افتح المصحف</button>
+        <!-- renamed action: it doesn't "open" cover anymore -->
+        <button id="scrollCoverBtn" class="btn" type="button">الغلاف</button>
       </div>
     </div>
   </header>
 
   <main>
-    <!-- Cover -->
-    <section class="coverWrap" aria-label="غلاف المصحف">
-      <div class="cover" id="cover">
+    <!-- Cover (ALWAYS VISIBLE) -->
+    <section class="coverWrap" id="coverPanel" aria-label="غلاف المصحف">
+      <div class="cover">
         <div class="leather"></div>
         <div class="coverInner">
           <div class="goldFrame"></div>
@@ -55,78 +56,80 @@
             <div class="quran">هدية خاصة</div>
 
             <div class="openRow">
-              <button class="btn" id="openBtn2" type="button">افتح</button>
-              <button class="btn secondary" id="randomBtn" type="button">آية عشوائية</button>
+              <button class="btn" id="randomBtn" type="button">آية عشوائية</button>
             </div>
 
-            <div class="coverHint">تصميم وردي بدرجات مختلفة — إحساس مصحف حقيقي</div>
+            <div class="coverHint">الغلاف ثابت — كل الصفحات تفتح على اليمين</div>
           </div>
         </div>
       </div>
     </section>
 
-    <!-- Main reader card -->
-    <section class="card" aria-label="السور والقراءة">
-      <div class="cardHead">
-        <div>
-          <h2 id="paneTitle">السور</h2>
-          <div class="meta" id="paneMeta">تحميل...</div>
-        </div>
-        <div class="meta" id="reciterMeta">ياسر الدوسري</div>
-      </div>
-
-      <div class="split">
-        <div class="list" id="surahList"></div>
-
-        <div class="reader" id="reader">
-          <div class="paper">
-            <div class="paperInner">
-              <div class="meta" id="surahHeader">اختر سورة من اليسار</div>
-              <div id="ayahs"></div>
-            </div>
+    <!-- Right column stack -->
+    <section class="rightStack">
+      <!-- Main reader card -->
+      <section class="card" aria-label="السور والقراءة">
+        <div class="cardHead">
+          <div>
+            <h2 id="paneTitle">السور</h2>
+            <div class="meta" id="paneMeta">تحميل...</div>
           </div>
-        </div>
-      </div>
-    </section>
-
-    <!-- Dua page (hidden by default) -->
-    <section class="card" id="duaPage" aria-label="صفحة الدعاء" style="display:none;">
-      <div class="cardHead">
-        <div>
-          <h2>أدعية حلا</h2>
-          <div class="meta">محفوظة على الجهاز فقط</div>
-        </div>
-        <button id="closeDuaBtn" class="btn secondary" type="button">إغلاق</button>
-      </div>
-
-      <div class="duaBody">
-        <div class="duaHero">
-          <div class="duaTitle">اللهم احفظ حلا وشرح صدرها</div>
-          <div class="duaSub">اختاري من الأدعية الجاهزة أو اكتبي دعاءك الخاص.</div>
+          <div class="meta" id="reciterMeta">ياسر الدوسري</div>
         </div>
 
-        <div class="duaGrid">
-          <div class="duaCard">
-            <div class="duaCardHead">أدعية جاهزة</div>
-            <div id="duaPresets" class="duaList"></div>
-          </div>
+        <div class="split">
+          <div class="list" id="surahList"></div>
 
-          <div class="duaCard">
-            <div class="duaCardHead">دعائي الخاص</div>
-
-            <div class="duaComposer">
-              <textarea id="duaInput" placeholder="اكتبي دعاءك هنا..."></textarea>
-              <div class="duaActions">
-                <button id="saveDuaBtn" class="btn" type="button">حفظ الدعاء</button>
-                <button id="clearDuaBtn" class="btn secondary" type="button">مسح</button>
+          <div class="reader" id="reader">
+            <div class="paper">
+              <div class="paperInner">
+                <div class="meta" id="surahHeader">اختر سورة من اليسار</div>
+                <div id="ayahs"></div>
               </div>
             </div>
-
-            <div class="duaCardHead" style="margin-top:12px;">المحفوظات</div>
-            <div id="duaSaved" class="duaList"></div>
           </div>
         </div>
-      </div>
+      </section>
+
+      <!-- Dua page (toggle visible on the right; cover stays) -->
+      <section class="card" id="duaPage" aria-label="صفحة الدعاء" style="display:none;">
+        <div class="cardHead">
+          <div>
+            <h2>أدعية حلا</h2>
+            <div class="meta">محفوظة على الجهاز فقط</div>
+          </div>
+          <button id="closeDuaBtn" class="btn secondary" type="button">إغلاق</button>
+        </div>
+
+        <div class="duaBody">
+          <div class="duaHero">
+            <div class="duaTitle">اللهم احفظ حلا وشرح صدرها</div>
+            <div class="duaSub">اختاري من الأدعية الجاهزة أو اكتبي دعاءك الخاص.</div>
+          </div>
+
+          <div class="duaGrid">
+            <div class="duaCard">
+              <div class="duaCardHead">أدعية جاهزة</div>
+              <div id="duaPresets" class="duaList"></div>
+            </div>
+
+            <div class="duaCard">
+              <div class="duaCardHead">دعائي الخاص</div>
+
+              <div class="duaComposer">
+                <textarea id="duaInput" placeholder="اكتبي دعاءك هنا..."></textarea>
+                <div class="duaActions">
+                  <button id="saveDuaBtn" class="btn" type="button">حفظ الدعاء</button>
+                  <button id="clearDuaBtn" class="btn secondary" type="button">مسح</button>
+                </div>
+              </div>
+
+              <div class="duaCardHead" style="margin-top:12px;">المحفوظات</div>
+              <div id="duaSaved" class="duaList"></div>
+            </div>
+          </div>
+        </div>
+      </section>
     </section>
   </main>
 

@@ -1,11 +1,7 @@
 // app.js
-// Quran.com API (chapters + Uthmani verses)
 const API_BASE = "https://api.quran.com/api/v4";
-
-// EveryAyah streaming (Yasser Al-Dussary 128kbps)
 const EVERYAYAH_BASE = "https://everyayah.com/data/Yasser_Ad-Dussary_128kbps/";
 
-// Helpers
 const el = (id) => document.getElementById(id);
 
 function pad3(n){ return String(n).padStart(3, "0"); }
@@ -37,6 +33,7 @@ let verses = [];
 let currentIndex = -1;
 let isLoop = false;
 
+// Elements
 const audio = el("audio");
 const surahListEl = el("surahList");
 const ayahsEl = el("ayahs");
@@ -54,16 +51,16 @@ const timeEl = el("time");
 
 const q = el("q");
 const resumeBtn = el("resumeBtn");
+const randomBtn = el("randomBtn");
+const scrollCoverBtn = el("scrollCoverBtn");
 
-// Cover
-function setCover(open){
-  const cover = el("cover");
-  if(!cover) return;
-  cover.style.opacity = open ? "0" : "1";
-  cover.style.pointerEvents = open ? "none" : "auto";
-  if(open) showToast("تم فتح المصحف");
+// Persistent cover: no hiding, just scroll to it
+function scrollToCover(){
+  const coverPanel = el("coverPanel");
+  if(coverPanel) coverPanel.scrollIntoView({behavior:"smooth", block:"start"});
 }
 
+// Local resume
 function saveLastPosition(){
   if(!currentChapter || currentIndex < 0) return;
   const payload = {
@@ -74,7 +71,6 @@ function saveLastPosition(){
   };
   localStorage.setItem("hala_mushaf_last", JSON.stringify(payload));
 }
-
 function readLastPosition(){
   try{
     const raw = localStorage.getItem("hala_mushaf_last");
@@ -85,15 +81,13 @@ function readLastPosition(){
   }
 }
 
+// UI helpers
 function updateTimeUI(){
   const cur = audio.currentTime || 0;
   const dur = audio.duration || 0;
   timeEl.textContent = `${fmtTime(cur)} / ${fmtTime(dur)}`;
-  if(dur > 0){
-    seek.value = Math.floor((cur/dur)*1000);
-  }
+  if(dur > 0) seek.value = Math.floor((cur/dur)*1000);
 }
-
 function setNowPlayingText(){
   if(!currentChapter || currentIndex < 0){
     nowLine1.textContent = "جاهز";
@@ -104,11 +98,9 @@ function setNowPlayingText(){
   nowLine1.textContent = `سورة ${currentChapter.name_arabic}`;
   nowLine2.textContent = `آية ${v.verse_number}`;
 }
-
 function setPlayButtonState(){
   playBtn.textContent = audio.paused ? "تشغيل" : "إيقاف";
 }
-
 function markPlaying(){
   document.querySelectorAll(".ayah").forEach(a => a.classList.remove("playing"));
   const active = document.querySelector(`.ayah[data-idx="${currentIndex}"]`);
@@ -127,7 +119,6 @@ async function fetchChapters(){
   chapters = data.chapters || [];
   paneMeta.textContent = `${chapters.length} سورة`;
 }
-
 async function fetchUthmaniVerses(chapterNumber){
   const res = await fetch(`${API_BASE}/quran/verses/uthmani?chapter_number=${chapterNumber}`);
   if(!res.ok) throw new Error("فشل تحميل الآيات");
@@ -147,7 +138,6 @@ function renderChapters(list){
     const div = document.createElement("div");
     div.className = "row";
     div.dataset.id = ch.id;
-
     div.innerHTML = `
       <div class="right">
         <div class="nameAr">${ch.name_arabic}</div>
@@ -159,14 +149,12 @@ function renderChapters(list){
     surahListEl.appendChild(div);
   });
 }
-
 function renderVerses(){
   ayahsEl.innerHTML = "";
   verses.forEach((v, idx) => {
     const wrap = document.createElement("div");
     wrap.className = "ayah";
     wrap.dataset.idx = idx;
-
     wrap.innerHTML = `
       <div class="ayahText">${v.text}</div>
       <div class="ayahTools">
@@ -174,7 +162,6 @@ function renderVerses(){
         <button class="mini" type="button">حفظ</button>
       </div>
     `;
-
     const playOne = wrap.querySelector(".mini.primary");
     const saveBtn = wrap.querySelectorAll(".mini")[1];
 
@@ -193,8 +180,6 @@ function renderVerses(){
 
 // Load + play
 async function loadChapter(chapterId){
-  setCover(true);
-
   currentChapter = chapters.find(c => c.id === Number(chapterId));
   if(!currentChapter) return;
 
@@ -205,7 +190,6 @@ async function loadChapter(chapterId){
     verses = await fetchUthmaniVerses(currentChapter.id);
     paneMeta.textContent = `${chapters.length} سورة • محمّل`;
     renderVerses();
-
     currentIndex = 0;
     markPlaying();
     setNowPlayingText();
@@ -218,12 +202,9 @@ async function loadChapter(chapterId){
 
 function playIndex(idx){
   if(!currentChapter) return;
-
   currentIndex = idx;
   const v = verses[currentIndex];
-  const url = verseMp3Url(currentChapter.id, v.verse_number);
-
-  audio.src = url;
+  audio.src = verseMp3Url(currentChapter.id, v.verse_number);
   audio.play().catch(()=>{});
   setPlayButtonState();
   markPlaying();
@@ -233,12 +214,10 @@ function playIndex(idx){
 
 function playNext(){
   if(!currentChapter || verses.length === 0) return;
-
   const next = currentIndex + 1;
   if(next >= verses.length){
-    if(isLoop){
-      playIndex(0);
-    } else {
+    if(isLoop) playIndex(0);
+    else{
       audio.pause();
       setPlayButtonState();
       showToast("انتهت السورة");
@@ -255,11 +234,8 @@ function playPrev(){
 
 function togglePlay(){
   if(!audio.src){
-    if(currentChapter && verses.length){
-      playIndex(Math.max(0, currentIndex));
-    } else {
-      showToast("اختر سورة أولاً");
-    }
+    if(currentChapter && verses.length) playIndex(Math.max(0, currentIndex));
+    else showToast("اختر سورة أولاً");
     return;
   }
   if(audio.paused) audio.play().catch(()=>{});
@@ -269,10 +245,7 @@ function togglePlay(){
 
 function resumeLast(){
   const last = readLastPosition();
-  if(!last){
-    showToast("لا يوجد موضع محفوظ");
-    return;
-  }
+  if(!last){ showToast("لا يوجد موضع محفوظ"); return; }
   const ch = Number(last.chapter);
   const idx = Number(last.index);
   loadChapter(ch).then(() => {
@@ -285,7 +258,6 @@ function resumeLast(){
 
 function randomAyah(){
   if(!chapters.length) return;
-  setCover(true);
   const ch = chapters[Math.floor(Math.random()*chapters.length)];
   loadChapter(ch.id).then(() => {
     const r = Math.floor(Math.random()*verses.length);
@@ -299,22 +271,7 @@ function randomAyah(){
   });
 }
 
-// Wire Quran UI
-el("openCoverBtn").addEventListener("click", () => setCover(true));
-el("openBtn2").addEventListener("click", () => setCover(true));
-el("randomBtn").addEventListener("click", randomAyah);
-
-resumeBtn.addEventListener("click", resumeLast);
-
-playBtn.addEventListener("click", togglePlay);
-nextBtn.addEventListener("click", playNext);
-prevBtn.addEventListener("click", playPrev);
-
-loopBtn.addEventListener("click", () => {
-  isLoop = !isLoop;
-  loopBtn.textContent = `تكرار: ${isLoop ? "نعم" : "لا"}`;
-});
-
+// Audio events
 audio.addEventListener("ended", playNext);
 audio.addEventListener("timeupdate", updateTimeUI);
 audio.addEventListener("play", setPlayButtonState);
@@ -326,17 +283,31 @@ seek.addEventListener("input", () => {
   audio.currentTime = (Number(seek.value)/1000) * audio.duration;
 });
 
+// Search
 q.addEventListener("input", () => {
   const s = q.value.trim();
   if(!s) return renderChapters(chapters);
   renderChapters(chapters.filter(c => (c.name_arabic || "").includes(s)));
 });
 
+// Buttons
+resumeBtn.addEventListener("click", resumeLast);
+randomBtn.addEventListener("click", randomAyah);
+scrollCoverBtn.addEventListener("click", scrollToCover);
+
+playBtn.addEventListener("click", togglePlay);
+nextBtn.addEventListener("click", playNext);
+prevBtn.addEventListener("click", playPrev);
+
+loopBtn.addEventListener("click", () => {
+  isLoop = !isLoop;
+  loopBtn.textContent = `تكرار: ${isLoop ? "نعم" : "لا"}`;
+});
+
 // =====================
 // Dua Page (local-only)
 // =====================
 const DUA_LS_KEY = "hala_duas_saved";
-
 const DUA_PRESETS = [
   "اللهم احفظ حلا بعينك التي لا تنام، واكتب لها الخير حيث كان.",
   "اللهم اجعل القرآن ربيع قلب حلا، ونور صدرها، وجلاء حزنها، وذهاب همّها.",
@@ -355,17 +326,13 @@ function getSavedDuas(){
 function setSavedDuas(arr){
   localStorage.setItem(DUA_LS_KEY, JSON.stringify(arr));
 }
-
 function applyFeaturedDua(){
   const featured = localStorage.getItem("hala_dua_featured");
-  const line = el("coverDuaLine");
-  if(line) line.textContent = featured ? featured : "";
+  el("coverDuaLine").textContent = featured ? featured : "";
 }
-
 function renderDuaList(container, items, { deletable } = {}){
   if(!container) return;
   container.innerHTML = "";
-
   if(!items.length){
     const empty = document.createElement("div");
     empty.className = "meta";
@@ -373,7 +340,6 @@ function renderDuaList(container, items, { deletable } = {}){
     container.appendChild(empty);
     return;
   }
-
   items.forEach((text, i) => {
     const item = document.createElement("div");
     item.className = "duaItem";
@@ -390,12 +356,8 @@ function renderDuaList(container, items, { deletable } = {}){
     copy.type = "button";
     copy.textContent = "نسخ";
     copy.onclick = async () => {
-      try{
-        await navigator.clipboard.writeText(text);
-        showToast("تم النسخ");
-      }catch{
-        showToast("تعذر النسخ");
-      }
+      try{ await navigator.clipboard.writeText(text); showToast("تم النسخ"); }
+      catch{ showToast("تعذر النسخ"); }
     };
 
     const pin = document.createElement("button");
@@ -431,57 +393,38 @@ function renderDuaList(container, items, { deletable } = {}){
     container.appendChild(item);
   });
 }
-
-function renderPresetDuas(){
-  renderDuaList(el("duaPresets"), DUA_PRESETS, { deletable:false });
-}
-function renderSavedDuas(){
-  renderDuaList(el("duaSaved"), getSavedDuas(), { deletable:true });
-}
+function renderPresetDuas(){ renderDuaList(el("duaPresets"), DUA_PRESETS, { deletable:false }); }
+function renderSavedDuas(){ renderDuaList(el("duaSaved"), getSavedDuas(), { deletable:true }); }
 
 function openDuaPage(){
   const page = el("duaPage");
-  if(!page) return;
   page.style.display = "";
   page.scrollIntoView({behavior:"smooth", block:"start"});
   showToast("صفحة الدعاء");
 }
 function closeDuaPage(){
-  const page = el("duaPage");
-  if(!page) return;
-  page.style.display = "none";
+  el("duaPage").style.display = "none";
 }
-
 function wireDuaPage(){
-  const duaBtn = el("duaBtn");
-  const closeBtn = el("closeDuaBtn");
-  const saveBtn = el("saveDuaBtn");
-  const clearBtn = el("clearDuaBtn");
+  el("duaBtn").addEventListener("click", openDuaPage);
+  el("closeDuaBtn").addEventListener("click", closeDuaPage);
+
   const input = el("duaInput");
-
-  if(duaBtn) duaBtn.addEventListener("click", openDuaPage);
-  if(closeBtn) closeBtn.addEventListener("click", closeDuaPage);
-
-  if(saveBtn && input){
-    saveBtn.addEventListener("click", () => {
-      const val = (input.value || "").trim();
-      if(!val) return showToast("اكتبي دعاء أولاً");
-      const arr = getSavedDuas();
-      if(arr.includes(val)) return showToast("موجود مسبقاً");
-      arr.unshift(val);
-      setSavedDuas(arr);
-      input.value = "";
-      renderSavedDuas();
-      showToast("تم الحفظ");
-    });
-  }
-
-  if(clearBtn && input){
-    clearBtn.addEventListener("click", () => {
-      input.value = "";
-      showToast("تم المسح");
-    });
-  }
+  el("saveDuaBtn").addEventListener("click", () => {
+    const val = (input.value || "").trim();
+    if(!val) return showToast("اكتبي دعاء أولاً");
+    const arr = getSavedDuas();
+    if(arr.includes(val)) return showToast("موجود مسبقاً");
+    arr.unshift(val);
+    setSavedDuas(arr);
+    input.value = "";
+    renderSavedDuas();
+    showToast("تم الحفظ");
+  });
+  el("clearDuaBtn").addEventListener("click", () => {
+    input.value = "";
+    showToast("تم المسح");
+  });
 
   renderPresetDuas();
   renderSavedDuas();
