@@ -1,345 +1,297 @@
-const API_BASE = "https://api.quran.com/api/v4";
-const EVERYAYAH_BASE = "https://everyayah.com/data/Yasser_Ad-Dussary_128kbps/";
-const el = (id) => document.getElementById(id);
+// Quran "page-to-page" mini app with Yasser Ad-Dussary audio from EveryAyah:
+// Base: https://everyayah.com/data/Yasser_Ad-Dussary_128kbps/
+// Files: SSSAAA.mp3 (SSS=surah 3 digits, AAA=ayah 3 digits). :contentReference[oaicite:2]{index=2}
 
-const pages = () => Array.from(document.querySelectorAll(".page"));
-function showPage(name){
-  pages().forEach(p => p.classList.toggle("active", p.dataset.page === name));
-}
+const gfName = "حلا";
 
-function pad3(n){ return String(n).padStart(3,"0"); }
-function mp3Url(surah, ayah){ return `${EVERYAYAH_BASE}${pad3(surah)}${pad3(ayah)}.mp3`; }
-
-const toastEl = el("toast");
-let toastTimer = null;
-function toast(msg){
-  if(!toastEl) return;
-  toastEl.textContent = msg;
-  toastEl.classList.add("show");
-  clearTimeout(toastTimer);
-  toastTimer = setTimeout(()=>toastEl.classList.remove("show"), 900);
-}
-
-const audio = el("audio");
-const seek = el("seek");
-const timeEl = el("time");
-const now1 = el("now1");
-const now2 = el("now2");
-
-const playBtn = el("playBtn");
-const prevBtn = el("prevBtn");
-const nextBtn = el("nextBtn");
-const loopBtn = el("loopBtn");
-
-const q = el("q");
-const statusEl = el("status");
-const surahListEl = el("surahList");
-const ayahsEl = el("ayahs");
-const surahHeader = el("surahHeader");
-
-const coverDuaLine = el("coverDuaLine");
-
-let chapters = [];
-let verses = [];
-let currentSurah = null;
-let idx = -1;
-let loop = false;
-
-function fmt(s){
-  if(!isFinite(s)) return "00:00";
-  const m = Math.floor(s/60), r = Math.floor(s%60);
-  return String(m).padStart(2,"0")+":"+String(r).padStart(2,"0");
-}
-
-function updateTime(){
-  const cur = audio.currentTime || 0;
-  const dur = audio.duration || 0;
-  if(timeEl) timeEl.textContent = `${fmt(cur)} / ${fmt(dur)}`;
-  if(dur > 0 && seek) seek.value = Math.floor((cur/dur)*1000);
-}
-
-function setNow(){
-  if(!now1 || !now2) return;
-  if(!currentSurah || idx < 0){ now1.textContent="—"; now2.textContent="—"; return; }
-  now1.textContent = `سورة ${currentSurah.name_arabic}`;
-  now2.textContent = `آية ${verses[idx].verse_number}`;
-}
-
-function setPlayLabel(){
-  if(!playBtn) return;
-  playBtn.textContent = audio.paused ? "تشغيل" : "إيقاف";
-}
-
-function savePos(){
-  if(!currentSurah || idx < 0) return;
-  localStorage.setItem("hala_last", JSON.stringify({ s: currentSurah.id, i: idx }));
-}
-
-function loadPos(){
-  try{ return JSON.parse(localStorage.getItem("hala_last")); }catch{ return null; }
-}
-
-function mark(){
-  document.querySelectorAll(".row").forEach(x=>x.classList.remove("active"));
-  const r = document.querySelector(`.row[data-id="${currentSurah?.id}"]`);
-  if(r) r.classList.add("active");
-
-  document.querySelectorAll(".ayah").forEach(x=>x.classList.remove("playing"));
-  const a = document.querySelector(`.ayah[data-idx="${idx}"]`);
-  if(a) a.classList.add("playing");
-}
-
-async function getChapters(){
-  const res = await fetch(`${API_BASE}/chapters?language=ar`);
-  if(!res.ok) throw 0;
-  const data = await res.json();
-  chapters = data.chapters || [];
-  if(statusEl) statusEl.textContent = `${chapters.length} سورة`;
-}
-
-async function getVerses(chapterNumber){
-  const res = await fetch(`${API_BASE}/quran/verses/uthmani?chapter_number=${chapterNumber}`);
-  if(!res.ok) throw 0;
-  const data = await res.json();
-  const v = data.verses || [];
-  return v.map(x => ({
-    verse_key: x.verse_key,
-    text: x.text_uthmani,
-    verse_number: x.verse_number ?? parseInt(String(x.verse_key).split(":")[1],10)
-  }));
-}
-
-function renderChapters(list){
-  surahListEl.innerHTML = "";
-  list.forEach(ch=>{
-    const d = document.createElement("div");
-    d.className = "row";
-    d.dataset.id = ch.id;
-    d.innerHTML = `
-      <div>
-        <div class="n">${ch.name_arabic}</div>
-        <div class="s">${ch.revelation_place === "makkah" ? "مكية" : "مدنية"} • ${ch.verses_count} آية</div>
-      </div>
-      <div class="b">${ch.id}</div>
-    `;
-    d.addEventListener("click", ()=>loadSurah(ch.id));
-    surahListEl.appendChild(d);
-  });
-}
-
-function renderVerses(){
-  ayahsEl.innerHTML = "";
-  verses.forEach((v,i)=>{
-    const d = document.createElement("div");
-    d.className = "ayah";
-    d.dataset.idx = i;
-    d.innerHTML = `
-      <div class="ayahText">${v.text}</div>
-      <div class="ayahBtns">
-        <button class="btn primary" type="button" data-act="play">تشغيل</button>
-        <button class="btn ghost" type="button" data-act="save">حفظ</button>
-      </div>
-    `;
-    d.querySelector('[data-act="play"]').addEventListener("click", ()=>playAt(i));
-    d.querySelector('[data-act="save"]').addEventListener("click", ()=>{
-      idx = i; savePos(); setNow(); mark(); toast("تم");
-    });
-    ayahsEl.appendChild(d);
-  });
-}
-
-async function loadSurah(id){
-  currentSurah = chapters.find(c=>c.id===Number(id));
-  if(!currentSurah) return;
-  if(surahHeader) surahHeader.textContent = `سورة ${currentSurah.name_arabic}`;
-  if(statusEl) statusEl.textContent = "تحميل...";
-  try{
-    verses = await getVerses(currentSurah.id);
-    if(statusEl) statusEl.textContent = `${chapters.length} سورة`;
-    renderVerses();
-    idx = 0;
-    savePos();
-    setNow();
-    mark();
-  }catch{
-    if(statusEl) statusEl.textContent = "خطأ";
-  }
-}
-
-function playAt(i){
-  if(!currentSurah) return;
-  idx = i;
-  audio.src = mp3Url(currentSurah.id, verses[idx].verse_number);
-  audio.play().catch(()=>{});
-  setPlayLabel();
-  setNow();
-  mark();
-  savePos();
-}
-
-function next(){
-  if(!currentSurah || !verses.length) return;
-  const n = idx + 1;
-  if(n >= verses.length){
-    if(loop) return playAt(0);
-    audio.pause();
-    setPlayLabel();
-    return;
-  }
-  playAt(n);
-}
-
-function prev(){
-  if(!currentSurah || !verses.length) return;
-  playAt(Math.max(0, idx - 1));
-}
-
-function toggle(){
-  if(!audio.src){
-    if(currentSurah && verses.length) return playAt(Math.max(0, idx));
-    return;
-  }
-  if(audio.paused) audio.play().catch(()=>{});
-  else audio.pause();
-  setPlayLabel();
-}
-
-const DUA_KEY = "hala_duas";
-const DUA_FEATURED = "hala_dua_featured";
-const DUA_PRESETS = [
-  "اللهم احفظ حلا بعينك التي لا تنام.",
-  "اللهم اجعل القرآن ربيع قلب حلا.",
-  "اللهم ارزق حلا طمأنينةً وبركةً.",
-  "اللهم اجبر خاطر حلا جبراً جميلاً.",
-  "اللهم يسّر أمر حلا وبارك لها."
+// Minimal surah dataset (starter). You can add more easily.
+const SURAHS = [
+  { no: 1, name: "الفاتحة", ayahs: 7 },
+  { no: 2, name: "البقرة", ayahs: 286 },
+  { no: 18, name: "الكهف", ayahs: 110 },
+  { no: 36, name: "يس", ayahs: 83 },
+  { no: 55, name: "الرحمن", ayahs: 78 },
+  { no: 67, name: "الملك", ayahs: 30 },
+  { no: 112, name: "الإخلاص", ayahs: 4 },
+  { no: 113, name: "الفلق", ayahs: 5 },
+  { no: 114, name: "الناس", ayahs: 6 },
 ];
 
-function getSavedDuas(){ try{ return JSON.parse(localStorage.getItem(DUA_KEY)) || []; }catch{ return []; } }
-function setSavedDuas(arr){ localStorage.setItem(DUA_KEY, JSON.stringify(arr)); }
-function applyFeatured(){ if(coverDuaLine) coverDuaLine.textContent = localStorage.getItem(DUA_FEATURED) || ""; }
+// EveryAyah Yasser Ad-Dussary
+const AUDIO_BASE = "https://everyayah.com/data/Yasser_Ad-Dussary_128kbps/"; // :contentReference[oaicite:3]{index=3}
 
-function renderDuaList(container, items, deletable){
-  container.innerHTML = "";
-  items.forEach((text, i)=>{
-    const d = document.createElement("div");
-    d.className = "duaItem";
-    d.innerHTML = `
-      <div class="duaText">${text}</div>
-      <div class="duaBtns">
-        <button class="btn primary" type="button" data-act="pin">تعيين</button>
-        <button class="btn ghost" type="button" data-act="copy">نسخ</button>
-        ${deletable ? `<button class="btn ghost" type="button" data-act="del">حذف</button>` : ``}
-      </div>
-    `;
-    d.querySelector('[data-act="pin"]').addEventListener("click", ()=>{
-      localStorage.setItem(DUA_FEATURED, text);
-      applyFeatured();
-      toast("تم");
+const el = (s) => document.querySelector(s);
+
+const state = {
+  panel: "home",
+  surah: 1,
+  ayah: 1,
+  audioReady: false,
+  isPlaying: false,
+  flip: false,
+  pageIndex: 1, // visual page number
+};
+
+const panels = () => [...document.querySelectorAll(".panel")];
+
+function setPanel(name) {
+  state.panel = name;
+  panels().forEach((p) => p.classList.toggle("active", p.dataset.panel === name));
+}
+
+function pad3(n) {
+  return String(n).padStart(3, "0");
+}
+
+function audioFileName(surahNo, ayahNo) {
+  return `${pad3(surahNo)}${pad3(ayahNo)}.mp3`;
+}
+
+function audioUrl(surahNo, ayahNo) {
+  return `${AUDIO_BASE}${audioFileName(surahNo, ayahNo)}`;
+}
+
+function surahByNo(no) {
+  return SURAHS.find((s) => s.no === no) || SURAHS[0];
+}
+
+function renderSurahSelect() {
+  const sel = el("#surahSelect");
+  sel.innerHTML = SURAHS.map((s) => `<option value="${s.no}">${s.no}. ${s.name}</option>`).join("");
+  sel.value = String(state.surah);
+}
+
+function renderAyahSelect() {
+  const s = surahByNo(state.surah);
+  const sel = el("#ayahSelect");
+  const opts = [];
+  for (let i = 1; i <= s.ayahs; i++) opts.push(`<option value="${i}">${i}</option>`);
+  sel.innerHTML = opts.join("");
+  sel.value = String(state.ayah);
+}
+
+function setNowTitle() {
+  const s = surahByNo(state.surah);
+  el("#nowTitle").textContent = `${s.name} — آية ${state.ayah}`;
+}
+
+async function fetchAyahText(surahNo, ayahNo) {
+  // Reliable public endpoint for Arabic text (no auth).
+  // If it ever fails, we still keep the audio working.
+  const url = `https://api.alquran.cloud/v1/ayah/${surahNo}:${ayahNo}/ar`;
+  const r = await fetch(url);
+  if (!r.ok) throw new Error("Text fetch failed");
+  const j = await r.json();
+  return j?.data?.text || "—";
+}
+
+async function loadAyah() {
+  setNowTitle();
+
+  // Text
+  el("#ayahText").textContent = "…";
+  try {
+    const txt = await fetchAyahText(state.surah, state.ayah);
+    el("#ayahText").textContent = txt;
+  } catch {
+    el("#ayahText").textContent = "تعذر تحميل نص الآية (لكن التلاوة تعمل).";
+  }
+
+  // Audio
+  const audio = el("#audio");
+  audio.src = audioUrl(state.surah, state.ayah); // :contentReference[oaicite:4]{index=4}
+  state.audioReady = true;
+}
+
+function playPause() {
+  const audio = el("#audio");
+  const btn = el("#playBtn");
+
+  if (!state.audioReady) return;
+
+  if (audio.paused) {
+    audio.play().then(() => {
+      state.isPlaying = true;
+      btn.textContent = "⏸";
+    }).catch(() => {
+      state.isPlaying = false;
+      btn.textContent = "▶";
+      alert("المتصفح منع التشغيل التلقائي. اضغطي تشغيل مرة أخرى.");
     });
-    d.querySelector('[data-act="copy"]').addEventListener("click", async ()=>{
-      try{ await navigator.clipboard.writeText(text); toast("تم"); }catch{ toast("—"); }
-    });
-    if(deletable){
-      d.querySelector('[data-act="del"]').addEventListener("click", ()=>{
-        const arr = getSavedDuas();
-        arr.splice(i,1);
-        setSavedDuas(arr);
-        renderSaved();
-        toast("تم");
-      });
-    }
-    container.appendChild(d);
-  });
-}
-
-function renderPresets(){ renderDuaList(el("duaPresets"), DUA_PRESETS, false); }
-function renderSaved(){ renderDuaList(el("duaSaved"), getSavedDuas(), true); }
-
-function wireDua(){
-  const input = el("duaInput");
-  el("saveDuaBtn").addEventListener("click", ()=>{
-    const v = (input.value || "").trim();
-    if(!v) return;
-    const arr = getSavedDuas();
-    if(arr.includes(v)) return;
-    arr.unshift(v);
-    setSavedDuas(arr);
-    input.value = "";
-    renderSaved();
-    toast("تم");
-  });
-  el("clearDuaBtn").addEventListener("click", ()=>{ input.value=""; });
-  renderPresets();
-  renderSaved();
-  applyFeatured();
-}
-
-function wirePages(){
-  el("goRead").addEventListener("click", ()=>showPage("read"));
-  el("goDua").addEventListener("click", ()=>showPage("dua"));
-  el("toCover1").addEventListener("click", ()=>showPage("cover"));
-  el("toDua1").addEventListener("click", ()=>showPage("dua"));
-  el("toRead2").addEventListener("click", ()=>showPage("read"));
-  el("toCover2").addEventListener("click", ()=>showPage("cover"));
-}
-
-function wirePlayer(){
-  playBtn.addEventListener("click", toggle);
-  nextBtn.addEventListener("click", next);
-  prevBtn.addEventListener("click", prev);
-  loopBtn.addEventListener("click", ()=>{ loop = !loop; loopBtn.textContent = `تكرار: ${loop ? "نعم" : "لا"}`; });
-  audio.addEventListener("ended", next);
-  audio.addEventListener("timeupdate", updateTime);
-  audio.addEventListener("play", setPlayLabel);
-  audio.addEventListener("pause", setPlayLabel);
-  audio.addEventListener("loadedmetadata", updateTime);
-  seek.addEventListener("input", ()=>{
-    if(!audio.duration) return;
-    audio.currentTime = (Number(seek.value)/1000) * audio.duration;
-  });
-}
-
-function wireSearch(){
-  q.addEventListener("input", ()=>{
-    const s = q.value.trim();
-    if(!s) return renderChapters(chapters);
-    renderChapters(chapters.filter(c => (c.name_arabic || "").includes(s)));
-  });
-}
-
-function wireResume(){
-  el("resumeBtn").addEventListener("click", ()=>{
-    const last = loadPos();
-    if(!last) return;
-    loadSurah(last.s).then(()=>{
-      idx = Math.min(Math.max(0, Number(last.i)), verses.length-1);
-      setNow();
-      mark();
-      toast("تم");
-    });
-  });
-}
-
-async function boot(){
-  showPage("cover");
-  wirePages();
-  wirePlayer();
-  wireSearch();
-  wireResume();
-  wireDua();
-  try{
-    await getChapters();
-    renderChapters(chapters);
-    const last = loadPos();
-    if(last?.s) await loadSurah(last.s);
-    if(last?.i != null){
-      idx = Math.min(Math.max(0, Number(last.i)), verses.length-1);
-      setNow();
-      mark();
-    }
-  }catch{
-    if(statusEl) statusEl.textContent = "خطأ";
+  } else {
+    audio.pause();
+    state.isPlaying = false;
+    btn.textContent = "▶";
   }
 }
 
-document.addEventListener("DOMContentLoaded", boot);
+function stopPlaybackUI() {
+  state.isPlaying = false;
+  el("#playBtn").textContent = "▶";
+}
+
+function nextAyah() {
+  const s = surahByNo(state.surah);
+  if (state.ayah < s.ayahs) {
+    state.ayah++;
+  } else {
+    // go to next surah if exists
+    const idx = SURAHS.findIndex((x) => x.no === state.surah);
+    if (idx >= 0 && idx < SURAHS.length - 1) {
+      state.surah = SURAHS[idx + 1].no;
+      state.ayah = 1;
+      el("#surahSelect").value = String(state.surah);
+      renderAyahSelect();
+    }
+  }
+  stopPlaybackUI();
+  loadAyah();
+}
+
+function prevAyah() {
+  if (state.ayah > 1) {
+    state.ayah--;
+  } else {
+    const idx = SURAHS.findIndex((x) => x.no === state.surah);
+    if (idx > 0) {
+      state.surah = SURAHS[idx - 1].no;
+      const s = surahByNo(state.surah);
+      state.ayah = s.ayahs;
+      el("#surahSelect").value = String(state.surah);
+      renderAyahSelect();
+    }
+  }
+  stopPlaybackUI();
+  loadAyah();
+}
+
+/** Page flip: we keep it simple: front shows panels; back is decorative during flip. */
+function flipForward() {
+  const sheet = el("#sheet");
+  sheet.classList.add("flipped");
+  state.flip = true;
+  // after flip, we immediately reset (so it feels like paging)
+  window.setTimeout(() => {
+    sheet.classList.remove("flipped");
+    state.flip = false;
+    state.pageIndex++;
+    el("#pageNumFront").textContent = String(state.pageIndex);
+    el("#pageNumBack").textContent = String(state.pageIndex + 1);
+  }, 540);
+}
+
+function flipBackward() {
+  const sheet = el("#sheet");
+  sheet.classList.add("flipped");
+  state.flip = true;
+  window.setTimeout(() => {
+    sheet.classList.remove("flipped");
+    state.flip = false;
+    state.pageIndex = Math.max(1, state.pageIndex - 1);
+    el("#pageNumFront").textContent = String(state.pageIndex);
+    el("#pageNumBack").textContent = String(state.pageIndex + 1);
+  }, 540);
+}
+
+// Map "page buttons" to meaningful navigation across panels
+const FLOW = ["home", "surah", "dua"];
+
+function goNextPanel() {
+  const i = FLOW.indexOf(state.panel);
+  const next = FLOW[Math.min(FLOW.length - 1, i + 1)];
+  if (next !== state.panel) {
+    setPanel(next);
+    flipForward();
+    if (next === "surah") loadAyah();
+  }
+}
+
+function goPrevPanel() {
+  const i = FLOW.indexOf(state.panel);
+  const prev = FLOW[Math.max(0, i - 1)];
+  if (prev !== state.panel) {
+    setPanel(prev);
+    flipBackward();
+  }
+}
+
+function bindUI() {
+  el("#gfName").textContent = gfName;
+
+  el("#openBookBtn").addEventListener("click", () => {
+    setPanel("surah");
+    flipForward();
+    loadAyah();
+  });
+
+  document.querySelectorAll("[data-go]").forEach((b) => {
+    b.addEventListener("click", () => {
+      const to = b.getAttribute("data-go");
+      setPanel(to);
+      flipForward();
+      if (to === "surah") loadAyah();
+    });
+  });
+
+  el("#nextBtn").addEventListener("click", goNextPanel);
+  el("#prevBtn").addEventListener("click", goPrevPanel);
+
+  el("#surahSelect").addEventListener("change", () => {
+    state.surah = Number(el("#surahSelect").value);
+    state.ayah = 1;
+    renderAyahSelect();
+    stopPlaybackUI();
+    loadAyah();
+  });
+
+  el("#ayahSelect").addEventListener("change", () => {
+    state.ayah = Number(el("#ayahSelect").value);
+    stopPlaybackUI();
+    loadAyah();
+  });
+
+  el("#playBtn").addEventListener("click", playPause);
+  el("#nextAyahBtn").addEventListener("click", nextAyah);
+  el("#prevAyahBtn").addEventListener("click", prevAyah);
+
+  el("#audio").addEventListener("ended", () => {
+    stopPlaybackUI();
+  });
+
+  // Keyboard paging
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "ArrowRight") goPrevPanel(); // RTL feel
+    if (e.key === "ArrowLeft") goNextPanel();
+  });
+
+  // Simple swipe (touch)
+  let sx = 0, sy = 0;
+  const area = el("#frontPage");
+  area.addEventListener("touchstart", (e) => {
+    const t = e.touches[0];
+    sx = t.clientX; sy = t.clientY;
+  }, { passive:true });
+
+  area.addEventListener("touchend", (e) => {
+    const t = e.changedTouches[0];
+    const dx = t.clientX - sx;
+    const dy = t.clientY - sy;
+    if (Math.abs(dx) > 50 && Math.abs(dy) < 60) {
+      if (dx > 0) goPrevPanel(); else goNextPanel();
+    }
+  }, { passive:true });
+}
+
+function init() {
+  renderSurahSelect();
+  renderAyahSelect();
+  setPanel("home");
+
+  // default selection
+  el("#surahSelect").value = String(state.surah);
+  el("#ayahSelect").value = String(state.ayah);
+
+  bindUI();
+}
+
+init();
