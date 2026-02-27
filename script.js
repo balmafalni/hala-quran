@@ -187,3 +187,192 @@ function wireDuaPage(){
 
 /* Call this once after your existing boot() finishes */
 wireDuaPage();
+
+/***********************
+ * Dua Page (local-only) — PATCHED
+ ***********************/
+(function () {
+  const getEl = (id) => {
+    try {
+      if (typeof el === "function") return el(id); // your app helper
+    } catch (_) {}
+    return document.getElementById(id);
+  };
+
+  const DUA_LS_KEY = "hala_duas_saved";
+
+  const DUA_PRESETS = [
+    "اللهم احفظ حلا بعينك التي لا تنام، واكتب لها الخير حيث كان.",
+    "اللهم اجعل القرآن ربيع قلب حلا، ونور صدرها، وجلاء حزنها، وذهاب همّها.",
+    "اللهم ارزق حلا طمأنينةً تسع الدنيا وما فيها.",
+    "اللهم اجبر خاطر حلا جبراً يليق بكرمك، وبدّل ضيقها فرجاً.",
+    "اللهم اشرح صدر حلا، ويسّر أمرها، وبارك لها في وقتها ورزقها.",
+    "اللهم اجعل حلا من أهل القرآن الذين هم أهلك وخاصتك.",
+    "اللهم ارزق حلا صحةً وعافيةً وسترًا ورضًا وحسنَ ختام.",
+    "اللهم اجعل أيام حلا بركةً، وخطواتها توفيقاً، وقلبها معلقاً بك."
+  ];
+
+  function toast(msg) {
+    try {
+      if (typeof showToast === "function") return showToast(msg);
+    } catch (_) {}
+    // fallback
+    alert(msg);
+  }
+
+  function getSavedDuas() {
+    try {
+      return JSON.parse(localStorage.getItem(DUA_LS_KEY)) || [];
+    } catch (_) {
+      return [];
+    }
+  }
+
+  function setSavedDuas(arr) {
+    localStorage.setItem(DUA_LS_KEY, JSON.stringify(arr));
+  }
+
+  function renderDuaList(container, items, { deletable } = {}) {
+    if (!container) return;
+    container.innerHTML = "";
+
+    if (!items || items.length === 0) {
+      const empty = document.createElement("div");
+      empty.className = "meta";
+      empty.textContent = "لا يوجد شيء هنا بعد.";
+      container.appendChild(empty);
+      return;
+    }
+
+    items.forEach((text, i) => {
+      const item = document.createElement("div");
+      item.className = "duaItem";
+
+      const t = document.createElement("div");
+      t.className = "duaText";
+      t.textContent = text;
+
+      const btns = document.createElement("div");
+      btns.className = "duaBtns";
+
+      const copy = document.createElement("button");
+      copy.className = "duaMini";
+      copy.type = "button";
+      copy.textContent = "نسخ";
+      copy.onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          toast("تم النسخ");
+        } catch (_) {
+          toast("تعذر النسخ");
+        }
+      };
+
+      const pin = document.createElement("button");
+      pin.className = "duaMini primary";
+      pin.type = "button";
+      pin.textContent = "تعيين كرسالة";
+      pin.onclick = () => {
+        localStorage.setItem("hala_dua_featured", text);
+        // optional: show on cover if exists
+        const coverLine = getEl("coverDuaLine");
+        if (coverLine) coverLine.textContent = text;
+        toast("تم تعيين الدعاء");
+      };
+
+      btns.appendChild(copy);
+      btns.appendChild(pin);
+
+      if (deletable) {
+        const del = document.createElement("button");
+        del.className = "duaMini";
+        del.type = "button";
+        del.textContent = "حذف";
+        del.onclick = () => {
+          const arr = getSavedDuas();
+          arr.splice(i, 1);
+          setSavedDuas(arr);
+          renderSavedDuas();
+          toast("تم الحذف");
+        };
+        btns.appendChild(del);
+      }
+
+      item.appendChild(t);
+      item.appendChild(btns);
+      container.appendChild(item);
+    });
+  }
+
+  function renderPresetDuas() {
+    renderDuaList(getEl("duaPresets"), DUA_PRESETS, { deletable: false });
+  }
+
+  function renderSavedDuas() {
+    renderDuaList(getEl("duaSaved"), getSavedDuas(), { deletable: true });
+  }
+
+  function openDuaPage() {
+    const page = getEl("duaPage");
+    if (!page) return toast("duaPage غير موجودة في الـ HTML");
+    page.style.display = "";
+    page.scrollIntoView({ behavior: "smooth", block: "start" });
+    toast("صفحة الدعاء");
+  }
+
+  function closeDuaPage() {
+    const page = getEl("duaPage");
+    if (!page) return;
+    page.style.display = "none";
+  }
+
+  function wire() {
+    const duaBtn = getEl("duaBtn");
+    const closeBtn = getEl("closeDuaBtn");
+    const saveBtn = getEl("saveDuaBtn");
+    const clearBtn = getEl("clearDuaBtn");
+    const input = getEl("duaInput");
+
+    // hard validation so you immediately know what's missing
+    if (!duaBtn) toast("زر صفحة الدعاء غير موجود: تأكد من id='duaBtn'");
+    if (!getEl("duaPage")) toast("قسم الدعاء غير موجود: تأكد من id='duaPage'");
+
+    if (duaBtn) duaBtn.addEventListener("click", openDuaPage);
+    if (closeBtn) closeBtn.addEventListener("click", closeDuaPage);
+
+    if (saveBtn && input) {
+      saveBtn.addEventListener("click", () => {
+        const val = (input.value || "").trim();
+        if (!val) return toast("اكتب/ي دعاء أولاً");
+        const saved = getSavedDuas();
+        if (saved.includes(val)) return toast("موجود مسبقاً");
+        saved.unshift(val);
+        setSavedDuas(saved);
+        input.value = "";
+        renderSavedDuas();
+        toast("تم الحفظ");
+      });
+    }
+
+    if (clearBtn && input) {
+      clearBtn.addEventListener("click", () => {
+        input.value = "";
+        toast("تم المسح");
+      });
+    }
+
+    renderPresetDuas();
+    renderSavedDuas();
+
+    const featured = localStorage.getItem("hala_dua_featured");
+    const coverLine = getEl("coverDuaLine");
+    if (featured && coverLine) coverLine.textContent = featured;
+  }
+
+  // Ensure runs after HTML exists
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", wire);
+  } else {
+    wire();
+  }
+})();
