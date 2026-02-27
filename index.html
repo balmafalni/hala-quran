@@ -2,17 +2,16 @@
 <html lang="ar" dir="rtl">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
     <title>القرآن الكريم — حلا</title>
     <link rel="stylesheet" href="styles.css" />
-    <meta name="theme-color" content="#f7c7d9" />
   </head>
 
   <body>
     <main class="stage">
       <section class="book">
-        <!-- Fixed cover -->
-        <aside class="cover">
+        <!-- Fixed cover (only before opening) -->
+        <aside class="cover" id="cover">
           <div class="coverInner">
             <div class="emboss">
               <div class="bismillah">بِسْمِ ٱللَّٰهِ ٱلرَّحْمَٰنِ ٱلرَّحِيمِ</div>
@@ -22,81 +21,40 @@
 
             <div class="coverFooter">
               <button class="pill" id="openBookBtn" type="button">افتحي القرآن</button>
-              <div class="tiny">صفحات • تلاوة: ياسر الدوسري</div>
+              <div class="tiny">تلاوة: ياسر الدوسري</div>
             </div>
           </div>
         </aside>
 
-        <!-- Reader pages -->
-        <section class="pages">
+        <!-- Reader -->
+        <section class="pages" id="reader" aria-hidden="true">
           <div class="sheet" id="sheet">
-            <article class="page face front" id="frontPage">
-              <header class="pageHeader">
-                <button class="miniBtn" id="thumbsBtn" type="button">☰</button>
-                <div class="badge">الصفحة</div>
-                <div class="pageNum" id="pageNumFront">1</div>
-                <button class="miniBtn" id="bookmarkBtn" type="button" title="حفظ الموضع">🔖</button>
+            <article class="page front" id="frontPage">
+              <!-- Minimal header only -->
+              <header class="readerHeader">
+                <div id="headerLine">—</div>
               </header>
 
-              <div class="pageBody readerBody">
-                <div class="topRow">
-                  <div class="nowTitle" id="nowTitle">الصفحة 1</div>
-
-                  <div class="jump">
-                    <input id="pageInput" class="pageInput" inputmode="numeric" pattern="[0-9]*" placeholder="اذهبي لصفحة" />
-                    <button id="goBtn" class="goBtn" type="button">اذهب</button>
-                  </div>
-                </div>
-
-                <div class="mushafFrame">
-                  <img id="pageImg" class="pageImg" alt="Quran page" />
-                  <div class="imgShade"></div>
-                </div>
-
-                <div class="playerCard">
-                  <div class="playerTop">
-                    <div class="playerSub">تلاوة: ياسر الدوسري</div>
-                    <div class="toggles">
-                      <button class="toggle" id="autoplayBtn" type="button">تشغيل تلقائي: إيقاف</button>
-                    </div>
-                  </div>
-
-                  <div class="playerBtns">
-                    <button class="iconBtn" id="prevBtn" type="button">⬅️</button>
-                    <button class="iconBtn big" id="playBtn" type="button">▶</button>
-                    <button class="iconBtn" id="nextBtn" type="button">➡️</button>
-                  </div>
-
-                  <audio id="audio" preload="none"></audio>
-                </div>
+              <!-- Full-bleed page image -->
+              <div class="mushaf">
+                <img id="pageImg" alt="Quran page" />
               </div>
-            </article>
 
-            <article class="page face back" id="backPage" aria-hidden="true">
-              <header class="pageHeader">
-                <div class="badge">الصفحة</div>
-                <div class="pageNum" id="pageNumBack">2</div>
-              </header>
-              <div class="pageBody backFill">
-                <div class="backMark">﴿ وَرَتِّلِ الْقُرْآنَ تَرْتِيلًا ﴾</div>
-              </div>
+              <!-- Minimal controls (optional but kept) -->
+              <footer class="readerFooter">
+                <button class="ctl" id="prevBtn" type="button">⬅️</button>
+                <button class="ctl play" id="playBtn" type="button">▶</button>
+                <button class="ctl" id="nextBtn" type="button">➡️</button>
+
+                <button class="ctl small" id="autoplayBtn" type="button">تلقائي: إيقاف</button>
+              </footer>
+
+              <audio id="audio" preload="none"></audio>
             </article>
           </div>
         </section>
       </section>
     </main>
-
-    <!-- Thumbnails drawer -->
-    <div class="drawer" id="drawer" aria-hidden="true">
-      <div class="drawerTop">
-        <div class="drawerTitle">الصفحات</div>
-        <button class="miniBtn" id="closeDrawerBtn" type="button">✕</button>
-      </div>
-
-      <div class="drawerGrid" id="thumbGrid"></div>
-    </div>
-
-    <div class="backdrop" id="backdrop" aria-hidden="true"></div>
 
     <script src="app.js"></script>
   </body>
