@@ -158,3 +158,94 @@
 #duaPage{
   grid-column: 1 / -1; /* spans full width inside main grid */
 }
+
+/* ===== Dua Page ===== */
+.duaBody{
+  padding: 14px;
+  background: linear-gradient(180deg, rgba(255,255,255,.92), rgba(255,255,255,.78));
+}
+
+.duaHero{
+  border-radius: 18px;
+  padding: 14px;
+  border: 1px solid rgba(242,183,214,.85);
+  background:
+    radial-gradient(900px 380px at 30% 10%, rgba(255,255,255,.95), rgba(255,243,249,.85)),
+    linear-gradient(135deg, rgba(255,208,232,.35), rgba(255,255,255,.65));
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.7);
+  margin-bottom: 14px;
+}
+.duaTitle{ font-size: 20px; font-weight: 800; color: var(--ink); }
+.duaSub{ margin-top: 6px; font-size: 13px; color: var(--muted); font-weight: 700; }
+
+.duaGrid{ display:grid; grid-template-columns: 1fr 1fr; gap:12px; }
+@media (max-width: 980px){ .duaGrid{ grid-template-columns: 1fr; } }
+
+.duaCard{
+  border-radius: 18px;
+  background:
+    radial-gradient(900px 420px at 50% 0%, rgba(255,255,255,.95), rgba(255,243,249,.85)),
+    linear-gradient(180deg, var(--paper), var(--paper2));
+  border: 1px solid rgba(242,183,214,.85);
+  box-shadow: inset 0 0 0 1px rgba(255,255,255,.7), var(--shadow2);
+  padding: 12px;
+  position: relative;
+  overflow: hidden;
+}
+.duaCard:before{
+  content:"";
+  position:absolute; inset:0;
+  background:
+    linear-gradient(90deg, rgba(242,183,214,.30), transparent 18%, transparent 82%, rgba(242,183,214,.20)),
+    repeating-linear-gradient(180deg, rgba(216,27,126,.05) 0px, rgba(216,27,126,.05) 1px, transparent 1px, transparent 28px);
+  opacity:.28;
+  pointer-events:none;
+}
+.duaCard > *{ position:relative; z-index:1; }
+
+.duaCardHead{ font-size:14px; font-weight:900; color:var(--ink); margin-bottom:10px; }
+.duaList{ display:flex; flex-direction:column; gap:10px; }
+
+.duaItem{
+  padding: 10px;
+  border-radius: 14px;
+  border: 1px solid rgba(242,183,214,.55);
+  background: rgba(255,255,255,.68);
+  display:flex;
+  gap:10px;
+}
+.duaText{ font-size:15px; line-height:1.9; font-weight:700; color:var(--ink); flex:1; min-width:0; }
+.duaBtns{ display:flex; flex-direction:column; gap:8px; min-width:120px; }
+
+.duaMini{
+  cursor:pointer;
+  border-radius: 12px;
+  padding: 9px 10px;
+  font-weight: 900;
+  font-size: 12px;
+  background: rgba(255,255,255,.92);
+  border: 1px solid rgba(242,183,214,.9);
+  color: var(--ink);
+  box-shadow: 0 10px 18px rgba(30,10,20,.07);
+  text-align:center;
+}
+.duaMini.primary{
+  background: linear-gradient(135deg, var(--pink0), var(--pink2));
+  border:none; color:#fff;
+}
+
+.duaComposer textarea{
+  width:100%;
+  min-height:120px;
+  resize: vertical;
+  border-radius: 16px;
+  border: 1px solid rgba(242,183,214,.85);
+  padding: 12px;
+  font-family: inherit;
+  font-size: 15px;
+  line-height: 1.9;
+  outline:none;
+  background: rgba(255,255,255,.78);
+  color: var(--ink);
+}
+.duaActions{ margin-top:10px; display:flex; gap:10px; flex-wrap:wrap; }

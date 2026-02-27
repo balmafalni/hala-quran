@@ -376,3 +376,159 @@ wireDuaPage();
     wire();
   }
 })();
+
+/***********************
+ * Dua Page (local-only)
+ ***********************/
+(function () {
+  const DUA_LS_KEY = "hala_duas_saved";
+
+  const DUA_PRESETS = [
+    "اللهم احفظ حلا بعينك التي لا تنام، واكتب لها الخير حيث كان.",
+    "اللهم اجعل القرآن ربيع قلب حلا، ونور صدرها، وجلاء حزنها، وذهاب همّها.",
+    "اللهم ارزق حلا طمأنينةً تسع الدنيا وما فيها.",
+    "اللهم اجبر خاطر حلا جبراً يليق بكرمك، وبدّل ضيقها فرجاً.",
+    "اللهم اشرح صدر حلا، ويسّر أمرها، وبارك لها في وقتها ورزقها.",
+    "اللهم اجعل حلا من أهل القرآن الذين هم أهلك وخاصتك.",
+    "اللهم ارزق حلا صحةً وعافيةً وسترًا ورضًا وحسنَ ختام.",
+    "اللهم اجعل أيام حلا بركةً، وخطواتها توفيقاً، وقلبها معلقاً بك."
+  ];
+
+  function getSaved() {
+    try { return JSON.parse(localStorage.getItem(DUA_LS_KEY)) || []; }
+    catch { return []; }
+  }
+  function setSaved(arr) {
+    localStorage.setItem(DUA_LS_KEY, JSON.stringify(arr));
+  }
+
+  function renderList(container, items, { deletable } = {}) {
+    if (!container) return;
+    container.innerHTML = "";
+
+    if (!items.length) {
+      const empty = document.createElement("div");
+      empty.className = "meta";
+      empty.textContent = "لا يوجد شيء هنا بعد.";
+      container.appendChild(empty);
+      return;
+    }
+
+    items.forEach((text, i) => {
+      const row = document.createElement("div");
+      row.className = "duaItem";
+
+      const t = document.createElement("div");
+      t.className = "duaText";
+      t.textContent = text;
+
+      const btns = document.createElement("div");
+      btns.className = "duaBtns";
+
+      const copy = document.createElement("button");
+      copy.className = "duaMini";
+      copy.type = "button";
+      copy.textContent = "نسخ";
+      copy.onclick = async () => {
+        try {
+          await navigator.clipboard.writeText(text);
+          showToast("تم النسخ");
+        } catch {
+          showToast("تعذر النسخ");
+        }
+      };
+
+      const pin = document.createElement("button");
+      pin.className = "duaMini primary";
+      pin.type = "button";
+      pin.textContent = "تعيين كرسالة";
+      pin.onclick = () => {
+        localStorage.setItem("hala_dua_featured", text);
+        showToast("تم تعيين الدعاء");
+      };
+
+      btns.appendChild(copy);
+      btns.appendChild(pin);
+
+      if (deletable) {
+        const del = document.createElement("button");
+        del.className = "duaMini";
+        del.type = "button";
+        del.textContent = "حذف";
+        del.onclick = () => {
+          const arr = getSaved();
+          arr.splice(i, 1);
+          setSaved(arr);
+          renderSaved();
+          showToast("تم الحذف");
+        };
+        btns.appendChild(del);
+      }
+
+      row.appendChild(t);
+      row.appendChild(btns);
+      container.appendChild(row);
+    });
+  }
+
+  function renderPresets() {
+    renderList(el("duaPresets"), DUA_PRESETS, { deletable: false });
+  }
+  function renderSaved() {
+    renderList(el("duaSaved"), getSaved(), { deletable: true });
+  }
+
+  function openDua() {
+    const page = el("duaPage");
+    if (!page) return showToast("duaPage مش موجودة");
+    page.style.display = "";
+    page.scrollIntoView({ behavior: "smooth", block: "start" });
+    showToast("صفحة الدعاء");
+  }
+  function closeDua() {
+    const page = el("duaPage");
+    if (!page) return;
+    page.style.display = "none";
+  }
+
+  function wire() {
+    const duaBtn = el("duaBtn");
+    const closeBtn = el("closeDuaBtn");
+    const saveBtn = el("saveDuaBtn");
+    const clearBtn = el("clearDuaBtn");
+    const input = el("duaInput");
+
+    if (duaBtn) duaBtn.addEventListener("click", openDua);
+    if (closeBtn) closeBtn.addEventListener("click", closeDua);
+
+    if (saveBtn && input) {
+      saveBtn.addEventListener("click", () => {
+        const val = (input.value || "").trim();
+        if (!val) return showToast("اكتب/ي دعاء أولاً");
+        const arr = getSaved();
+        if (arr.includes(val)) return showToast("موجود مسبقاً");
+        arr.unshift(val);
+        setSaved(arr);
+        input.value = "";
+        renderSaved();
+        showToast("تم الحفظ");
+      });
+    }
+
+    if (clearBtn && input) {
+      clearBtn.addEventListener("click", () => {
+        input.value = "";
+        showToast("تم المسح");
+      });
+    }
+
+    renderPresets();
+    renderSaved();
+  }
+
+  if (document.readyState === "loading") {
+    document.addEventListener("DOMContentLoaded", wire);
+  } else {
+    wire();
+  }
+})();
